@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GenoStruct Interpreter — Precision Genomics Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --primer: #FAFAF8;
+  --white:  #FFFFFF;
+  --ink:    #0F0F0E;
+  --ink-2:  #2C2C2A;
+  --ink-3:  #5C5C58;
+  --line:   #E8E8E3;
+  --line-2: #D0D0C8;
+
+  --benign:     #2E7D32;
+  --lbenign:    #558B2F;
+  --vus:        #F57C00;
+  --lpathog:    #C62828;
+  --pathog:     #B71C1C;
+
+  --accent:     #1A1A6E;
+  --accent-2:   #3949AB;
+  --accent-pale:#EEF0FF;
+
+  --red-light:  #FFF3F3;
+  --orange-light:#FFF8F0;
+  --green-light: #F0FFF4;
+  --blue-light:  #F0F4FF;
+
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 24px 64px rgba(0,0,0,0.14);
+
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--primer);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+
+/* ── Layout ── */
+.app-shell {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+}
+
+/* ── Top bar ── */
+.topbar {
+  grid-column: 1 / -1;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.logo-helix {
+  width: 32px;
+  height: 32px;
+  position: relative;
+}
+.logo-helix svg { width: 32px; height: 32px; }
+
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+.logo-text span { color: var(--accent-2); }
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--line);
+}
+
+.topbar-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge-live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--benign);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.badge-live::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--benign);
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn-outline {
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--line-2);
+}
+.btn-outline:hover { background: var(--primer); border-color: var(--accent-2); color: var(--accent-2); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--white);
+  border-right: 1px solid var(--line);
+  padding: 16px 0;
+  overflow-y: auto;
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 8px 20px 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.12s;
+  border-left: 2px solid transparent;
+  text-decoration: none;
+}
+.nav-item:hover { background: var(--primer); color: var(--accent); }
+.nav-item.active {
+  background: var(--accent-pale);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+.nav-item .icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
+.nav-item.active .icon { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent-pale);
+  color: var(--accent-2);
+  border-radius: 20px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Main Content ── */
+.main {
+  overflow-y: auto;
+  padding: 0;
+  background: var(--primer);
+}
+
+/* ── Panels (pages) ── */
+.panel { display: none; padding: 28px; }
+.panel.active { display: block; }
+
+/* ── Page Header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.page-header-left h1 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+.page-header-left p {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.1px;
+}
+.card-body { padding: 20px; }
+
+/* ── Stat cards ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.stat-card.blue::before   { background: var(--accent-2); }
+.stat-card.green::before  { background: var(--benign); }
+.stat-card.orange::before { background: var(--vus); }
+.stat-card.red::before    { background: var(--pathog); }
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: var(--ink);
+}
+.stat-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+
+/* ── Upload Zone ── */
+.upload-zone {
+  border: 2px dashed var(--line-2);
+  border-radius: var(--radius);
+  background: var(--white);
+  padding: 48px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--accent-2);
+  background: var(--accent-pale);
+}
+.upload-zone-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--accent-pale);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.upload-zone h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.upload-zone p { color: var(--ink-3); font-size: 13px; }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ── Progress Bar ── */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent-2);
+  transition: width 0.4s ease;
+}
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+thead th {
+  background: var(--primer);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+thead th:hover { color: var(--accent); }
+tbody tr {
+  border-bottom: 1px solid var(--line);
+  transition: background 0.1s;
+  cursor: pointer;
+}
+tbody tr:hover { background: var(--accent-pale); }
+tbody tr.selected { background: var(--accent-pale); }
+tbody td {
+  padding: 9px 14px;
+  vertical-align: middle;
+  color: var(--ink-2);
+}
+.gene-tag {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-pale);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.hgvs-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* ── Pathogenicity Badges ── */
+.path-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.path-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.pb-benign      { background: #E8F5E9; color: var(--benign); }
+.pb-benign::before { background: var(--benign); }
+.pb-lbenign     { background: #F1F8E9; color: var(--lbenign); }
+.pb-lbenign::before { background: var(--lbenign); }
+.pb-vus         { background: #FFF3E0; color: var(--vus); }
+.pb-vus::before { background: var(--vus); }
+.pb-lpathog     { background: #FFEBEE; color: var(--lpathog); }
+.pb-lpathog::before { background: var(--lpathog); }
+.pb-pathog      { background: #FFCDD2; color: var(--pathog); }
+.pb-pathog::before { background: var(--pathog); }
+
+/* ── Score bar ── */
+.score-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.score-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 60px;
+}
+.score-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s;
+}
+.score-val { font-size: 11px; font-weight: 600; color: var(--ink-2); min-width: 28px; text-align: right; }
+
+/* ── 3D Viewer ── */
+#protein-canvas-wrap {
+  width: 100%;
+  height: 520px;
+  background: #0A0A1A;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+#protein-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.viewer-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+}
+.viewer-btn {
+  width: 32px;
+  height: 32px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+.viewer-btn:hover { background: rgba(255,255,255,0.2); }
+
+.viewer-legend {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(10,10,26,0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: white;
+  font-size: 11px;
+}
+.viewer-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 4px;
+}
+.viewer-legend-item:last-child { margin-bottom: 0; }
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.variant-info-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(10,10,26,0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: white;
+  font-size: 12px;
+  max-width: 240px;
+}
+.variant-info-overlay h4 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.vinfo-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 3px; }
+.vinfo-label { color: rgba(255,255,255,0.5); }
+.vinfo-val { font-family: var(--font-mono); font-size: 11px; }
+
+/* ── Pathogenicity Dashboard ── */
+.path-scale {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 36px;
+  margin: 16px 0 8px;
+}
+.path-scale-seg {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  position: relative;
+  transition: flex 0.5s;
+}
+.pss-benign   { background: #2E7D32; }
+.pss-lbenign  { background: #558B2F; }
+.pss-vus      { background: #F57C00; }
+.pss-lpathog  { background: #C62828; }
+.pss-pathog   { background: #B71C1C; }
+
+.path-pointer {
+  width: 2px;
+  height: 50px;
+  background: var(--ink);
+  position: relative;
+  margin: 0 auto;
+  transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── XAI Heatmap ── */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 3px;
+  padding: 16px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+  position: relative;
+}
+.heatmap-cell:hover {
+  transform: scale(1.3);
+  z-index: 5;
+}
+.heatmap-tooltip {
+  position: fixed;
+  background: var(--ink);
+  color: white;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+/* ── Literature Feed ── */
+.lit-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lit-item:last-child { border-bottom: none; }
+.lit-item:hover { padding-left: 4px; }
+.lit-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.lit-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+.lt-clinical  { background: var(--blue-light); color: var(--accent-2); }
+.lt-drug      { background: var(--green-light); color: var(--benign); }
+.lt-structure { background: #F3E5F5; color: #6A1B9A; }
+.lt-review    { background: #E0F7FA; color: #00695C; }
+.lit-title    { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+.lit-meta     { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+.lit-abstract { font-size: 12px; color: var(--ink-2); margin-top: 6px; line-height: 1.5; }
+
+/* ── Comparison panel ── */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.comparison-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink-3);
+  padding-top: 40px;
+}
+.compare-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.compare-card-header {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.compare-card-header.wild  { background: var(--benign); }
+.compare-card-header.mut   { background: var(--lpathog); }
+.compare-mini-canvas {
+  height: 200px;
+  display: block;
+  background: #0A0A1A;
+}
+.compare-stats { padding: 16px; }
+.compare-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.compare-stat-row:last-child { border-bottom: none; }
+
+/* ── Report panel ── */
+.report-preview {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: var(--shadow-md);
+}
+.report-header {
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.report-title { font-family: var(--font-display); font-size: 22px; }
+.report-meta { font-size: 11px; color: var(--ink-3); text-align: right; line-height: 1.6; }
+.report-section { margin-bottom: 24px; }
+.report-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.report-finding {
+  background: var(--accent-pale);
+  border-left: 4px solid var(--accent-2);
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.report-drug-rec {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--green-light);
+  border: 1px solid #C8E6C9;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.drug-icon { font-size: 20px; }
+.drug-name { font-weight: 600; font-size: 14px; }
+.drug-detail { font-size: 12px; color: var(--ink-3); }
+
+/* ── Chips / Tags ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.chip-blue { background: var(--blue-light); color: var(--accent-2); border-color: #C5CAE9; }
+.chip-green { background: var(--green-light); color: var(--benign); border-color: #C8E6C9; }
+.chip-orange { background: var(--orange-light); color: var(--vus); border-color: #FFE0B2; }
+
+/* ── Search / Filter row ── */
+.filter-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  height: 36px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 0 12px 0 36px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  background: var(--white);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8' stroke='%23999' stroke-width='2'/%3E%3Cpath d='m21 21-4.35-4.35' stroke='%23999' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px center;
+}
+.search-input:focus { border-color: var(--accent-2); }
+
+.select-filter {
+  height: 36px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 0 28px 0 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  background: var(--white);
+  color: var(--ink-2);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 8px) center;
+  transition: border-color 0.15s;
+}
+.select-filter:focus { border-color: var(--accent-2); }
+
+/* ── Two-col layout ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* ── Chart container ── */
+.chart-wrap { position: relative; height: 220px; }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.tab-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Notification toast ── */
+.toast-area {
+  position: fixed;
+  top: 68px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--ink);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-md);
+  animation: toast-in 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  pointer-events: auto;
+  max-width: 320px;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+.toast.out { animation: toast-out 0.25s ease forwards; }
+@keyframes toast-out {
+  to { opacity: 0; transform: translateX(10px); }
+}
+
+/* ── Spinner ── */
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent-2);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--ink-3);
+}
+.empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state h3 { font-size: 16px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; }
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .three-col { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 800px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .two-col { grid-template-columns: 1fr; }
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Section-specific animations ── */
+.fade-in {
+  animation: fadein 0.4s ease both;
+}
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label { color: var(--ink-3); font-weight: 500; }
+.detail-val   { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+
+.action-alert {
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFF3E0 100%);
+  border: 1px solid #FFCC02;
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  display: flex;
+  gap: 10px;
+}
+.action-alert-icon { font-size: 20px; flex-shrink: 0; }
+
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ── TOPBAR ── -->
+  <header class="topbar">
+    <a class="logo-mark" href="#" onclick="navigate('dashboard')">
+      <div class="logo-helix">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 4 C8 4 24 4 24 4 C24 4 8 28 8 28 C8 28 24 28 24 28" stroke="#1A1A6E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="8" cy="4"  r="2.5" fill="#3949AB"/>
+          <circle cx="24" cy="28" r="2.5" fill="#3949AB"/>
+          <circle cx="16" cy="16" r="2" fill="#C62828"/>
+        </svg>
+      </div>
+      <div class="logo-text">GenoStruct <span>Interpreter</span></div>
+    </a>
+    <div class="topbar-divider"></div>
+    <div class="topbar-subtitle">Precision Genomics Platform</div>
+    <div class="topbar-right">
+      <div class="badge-live">AI Engine Active</div>
+      <button class="btn btn-outline btn-sm" onclick="navigate('report')">⬇ Generate Report</button>
+      <button class="btn btn-primary btn-sm" onclick="navigate('upload')">+ Upload Genomic File</button>
+    </div>
+  </header>
+
+  <!-- ── SIDEBAR ── -->
+  <nav class="sidebar">
+    <div class="nav-section-label">Core Engine</div>
+    <a class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" id="nav-upload" onclick="navigate('upload')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M8 10V2M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Upload Genomic File
+    </a>
+    <a class="nav-item" id="nav-variants" onclick="navigate('variants')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M1 3h14M1 8h14M1 13h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Variant Explorer
+      <span class="nav-badge" id="nav-variant-count">500</span>
+    </a>
+    <a class="nav-item" id="nav-viewer" onclick="navigate('viewer')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="currentColor"/></svg>
+      3D Protein Viewer
+    </a>
+    <a class="nav-item" id="nav-pathogenicity" onclick="navigate('pathogenicity')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M2 12 L5 7 L8 9 L11 4 L14 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Pathogenicity Score
+    </a>
+    <a class="nav-item" id="nav-xai" onclick="navigate('xai')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      XAI Heatmap
+    </a>
+    <div class="nav-section-label" style="margin-top:8px">Clinical Support</div>
+    <a class="nav-item" id="nav-report" onclick="navigate('report')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h6M5 12h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Precision Report
+    </a>
+    <a class="nav-item" id="nav-literature" onclick="navigate('literature')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 2h7l3 3v9H3V2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      Scientific Literature
+    </a>
+    <a class="nav-item" id="nav-compare" onclick="navigate('compare')">
+      <svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M2 8h5M9 8h5M6.5 4l-1.5 4 1.5 4M9.5 4l1.5 4-1.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Variant Comparison
+    </a>
+    <div style="margin: 16px 20px 8px; padding-top: 16px; border-top: 1px solid var(--line);">
+      <div style="font-size:11px; color:var(--ink-3); line-height:1.5;">
+        <div style="font-weight:600; margin-bottom:4px; color:var(--ink-2);">Dataset Loaded</div>
+        <div>100,000 variants</div>
+        <div>107 cancer genes</div>
+        <div>ClinVar · gnomAD · COSMIC</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="panel active fade-in" id="panel-dashboard">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Clinical Overview</h1>
+          <p>Real-time summary of loaded genomic variants and AI analysis status</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="navigate('variants')">Browse Variants</button>
+          <button class="btn btn-primary btn-sm" onclick="navigate('viewer')">Open 3D Viewer</button>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card blue">
+          <div class="stat-label">Total Variants</div>
+          <div class="stat-value">100K</div>
+          <div class="stat-sub">Across 107 cancer genes</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Pathogenic Variants</div>
+          <div class="stat-value" id="dash-pathog-count">15,750</div>
+          <div class="stat-sub">15.8% of total · 4,821 actionable</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">VUS (Uncertain)</div>
+          <div class="stat-value">20,253</div>
+          <div class="stat-sub">Require further analysis</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Drug Targets</div>
+          <div class="stat-value">47</div>
+          <div class="stat-sub">FDA-approved therapies available</div>
+        </div>
+      </div>
+
+      <div class="two-col" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Pathogenicity Distribution</div>
+            <span class="chip chip-blue">100K variants</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-pathog"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top 10 Genes by Variant Count</div>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-genes"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Variant Type Breakdown</div>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-types"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recently Analyzed</div>
+            <button class="btn btn-outline btn-sm" onclick="navigate('variants')">View All</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap">
+              <table id="recent-table">
+                <thead><tr>
+                  <th>Gene</th><th>HGVS</th><th>Pathogenicity</th><th>Confidence</th>
+                </tr></thead>
+                <tbody id="recent-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="panel fade-in" id="panel-upload">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Upload Genomic File</h1>
+          <p>Supports VCF, FASTQ, and JSON formats. Files are validated and parsed in real-time.</p>
+        </div>
+      </div>
+      <div style="max-width:640px">
+        <div class="upload-zone" id="drop-zone" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="this.classList.remove('dragover')">
+          <input type="file" accept=".vcf,.fastq,.json,.gz" onchange="handleFileSelect(event)"/>
+          <div class="upload-zone-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3949AB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <h3>Drag & drop your genomic file here</h3>
+          <p>Supports .vcf, .fastq, .json — or click to browse</p>
+        </div>
+
+        <div id="upload-progress" style="display:none; margin-top:16px">
+          <div class="card">
+            <div class="card-body">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;">
+                <span id="upload-filename" style="font-weight:600"></span>
+                <span id="upload-pct" style="color:var(--ink-3)">0%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" id="upload-fill" style="width:0%"></div></div>
+              <div id="upload-status" style="font-size:12px;color:var(--ink-3);margin-top:6px">Initializing…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><div class="card-title">Supported File Formats</div></div>
+          <div class="card-body">
+            <div class="detail-row"><span class="detail-label">.vcf / .vcf.gz</span><span class="detail-val">Variant Call Format — SNVs, InDels, CNVs</span></div>
+            <div class="detail-row"><span class="detail-label">.fastq / .fastq.gz</span><span class="detail-val">Raw sequencing reads — alignment & calling</span></div>
+            <div class="detail-row"><span class="detail-label">.json</span><span class="detail-val">GenoStruct interchange format</span></div>
+            <div class="detail-row"><span class="detail-label">Max size</span><span class="detail-val">5 GB per file</span></div>
+          </div>
+        </div>
+
+        <div class="action-alert" style="margin-top:16px">
+          <div class="action-alert-icon">🔒</div>
+          <div>All genomic data is processed locally in your browser. No patient data is transmitted to external servers. HIPAA-compliant architecture.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VARIANTS -->
+    <div class="panel fade-in" id="panel-variants">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Variant Explorer</h1>
+          <p>Browse, filter, and investigate all 100,000 genomic variants</p>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <input class="search-input" id="var-search" placeholder="Search gene, HGVS, variant ID…" oninput="filterVariants()"/>
+        <select class="select-filter" id="var-pathog-filter" onchange="filterVariants()">
+          <option value="">All Pathogenicity</option>
+          <option>Pathogenic</option>
+          <option>Likely Pathogenic</option>
+          <option>Variant of Uncertain Significance</option>
+          <option>Likely Benign</option>
+          <option>Benign</option>
+        </select>
+        <select class="select-filter" id="var-type-filter" onchange="filterVariants()">
+          <option value="">All Types</option>
+          <option>SNV</option><option>InDel</option><option>Frameshift</option>
+          <option>Nonsense</option><option>Missense</option><option>CNV</option><option>Splice</option>
+        </select>
+        <select class="select-filter" id="var-gene-filter" onchange="filterVariants()">
+          <option value="">All Genes</option>
+        </select>
+        <span id="var-count-label" style="font-size:12px;color:var(--ink-3);white-space:nowrap">Showing 500 variants</span>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th onclick="sortTable('variant_id')">ID</th>
+              <th onclick="sortTable('gene')">Gene</th>
+              <th onclick="sortTable('hgvs_p')">Protein Change</th>
+              <th onclick="sortTable('variant_type')">Type</th>
+              <th onclick="sortTable('pathogenicity')">Pathogenicity</th>
+              <th onclick="sortTable('cadd_phred')">CADD</th>
+              <th onclick="sortTable('confidence_score')">Confidence</th>
+              <th onclick="sortTable('cancer_type')">Cancer Type</th>
+              <th>Action</th>
+            </tr></thead>
+            <tbody id="var-tbody"></tbody>
+          </table>
+        </div>
+        <div style="padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center">
+          <button class="btn btn-outline btn-sm" id="prev-page" onclick="changePage(-1)">← Prev</button>
+          <span id="page-info" style="font-size:12px;color:var(--ink-3)">Page 1 of 50</span>
+          <button class="btn btn-outline btn-sm" id="next-page" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3D VIEWER -->
+    <div class="panel fade-in" id="panel-viewer">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>3D Protein Visualizer</h1>
+          <p>Interactive WebGL workspace — drag to rotate, scroll to zoom</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="select-filter" id="viewer-gene-select" onchange="updateViewerVariant()">
+            <option value="">Select gene…</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="resetCamera()">Reset View</button>
+          <button class="btn btn-primary btn-sm" onclick="navigate('xai')">Show XAI Overlay</button>
+        </div>
+      </div>
+
+      <div style="position:relative" id="protein-canvas-wrap">
+        <canvas id="protein-canvas"></canvas>
+
+        <div class="viewer-controls">
+          <div class="viewer-btn" onclick="zoomViewer(1.2)" title="Zoom in">+</div>
+          <div class="viewer-btn" onclick="zoomViewer(0.8)" title="Zoom out">−</div>
+          <div class="viewer-btn" onclick="toggleWireframe()" title="Wireframe">⬡</div>
+          <div class="viewer-btn" onclick="toggleSpin()" title="Auto-spin" id="spin-btn">⟳</div>
+        </div>
+
+        <div class="variant-info-overlay" id="viewer-info">
+          <h4 id="viewer-gene-name">TP53 · p.Arg248Trp</h4>
+          <div class="vinfo-row"><span class="vinfo-label">Domain</span><span class="vinfo-val" id="viewer-domain">DNA-binding</span></div>
+          <div class="vinfo-row"><span class="vinfo-label">Effect</span><span class="vinfo-val" id="viewer-struct-eff" style="color:#ff6b6b;font-size:10px">Blocks ATP-binding pocket</span></div>
+          <div class="vinfo-row"><span class="vinfo-label">Score</span><span class="vinfo-val" id="viewer-struct-score">0.87</span></div>
+          <div class="vinfo-row"><span class="vinfo-label">CADD</span><span class="vinfo-val" id="viewer-cadd">32.4</span></div>
+        </div>
+
+        <div class="viewer-legend">
+          <div class="viewer-legend-item"><div class="legend-dot" style="background:#4488FF"></div>Alpha-helix</div>
+          <div class="viewer-legend-item"><div class="legend-dot" style="background:#44CC88"></div>Beta-sheet</div>
+          <div class="viewer-legend-item"><div class="legend-dot" style="background:#FFAA44"></div>Loop / Turn</div>
+          <div class="viewer-legend-item"><div class="legend-dot" style="background:#FF4444"></div>Mutation site</div>
+          <div class="viewer-legend-item"><div class="legend-dot" style="background:#FF00FF"></div>Drug binding pocket</div>
+        </div>
+      </div>
+
+      <div class="two-col" style="margin-top:20px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Structural Analysis</div></div>
+          <div class="card-body" id="viewer-struct-panel">
+            <div class="detail-row"><span class="detail-label">Protein Structure</span><span class="detail-val" id="vs-protein">TP53 (P04637)</span></div>
+            <div class="detail-row"><span class="detail-label">Affected Residue</span><span class="detail-val" id="vs-residue">Arg248</span></div>
+            <div class="detail-row"><span class="detail-label">Protein Domain</span><span class="detail-val" id="vs-domain">DNA-binding domain</span></div>
+            <div class="detail-row"><span class="detail-label">Structural Score</span><span class="detail-val" id="vs-score">0.87 (High impact)</span></div>
+            <div class="detail-row"><span class="detail-label">Functional Impact</span><span class="detail-val" id="vs-impact">Loss of Function</span></div>
+            <div class="detail-row"><span class="detail-label">AlphaFold pLDDT</span><span class="detail-val">91.4</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Drug Binding Analysis</div></div>
+          <div class="card-body">
+            <div class="action-alert" style="margin-bottom:12px">
+              <div class="action-alert-icon">💊</div>
+              <div>
+                <div style="font-weight:600;margin-bottom:2px" id="viewer-drug">APR-246 (Eprenetapopt)</div>
+                <div style="font-size:12px" id="viewer-drug-detail">Restores wild-type p53 conformation. Phase III trial. Evidence Level 1B.</div>
+              </div>
+            </div>
+            <div class="detail-row"><span class="detail-label">Binding Affinity (ΔG)</span><span class="detail-val" id="vs-affinity">−9.4 kcal/mol</span></div>
+            <div class="detail-row"><span class="detail-label">Pocket Volume</span><span class="detail-val">284 Å³</span></div>
+            <div class="detail-row"><span class="detail-label">Accessibility</span><span class="detail-val">Modified (mutant)</span></div>
+            <div class="detail-row"><span class="detail-label">Alternative Therapy</span><span class="detail-val" id="vs-alt-drug">PRIMA-1MET</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PATHOGENICITY -->
+    <div class="panel fade-in" id="panel-pathogenicity">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Pathogenicity Scoring Dashboard</h1>
+          <p>AI-powered classification of genetic variants using multi-evidence integration</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><div class="card-title">Pathogenicity Scale</div></div>
+        <div class="card-body">
+          <div class="path-scale">
+            <div class="path-scale-seg pss-benign">Benign<br><small>27.9%</small></div>
+            <div class="path-scale-seg pss-lbenign">L. Benign<br><small>22.2%</small></div>
+            <div class="path-scale-seg pss-vus">VUS<br><small>20.3%</small></div>
+            <div class="path-scale-seg pss-lpathog">L. Patho.<br><small>13.9%</small></div>
+            <div class="path-scale-seg pss-pathog">Pathogenic<br><small>15.8%</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">CADD Score Distribution</div></div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-cadd"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">REVEL Score vs Pathogenicity</div></div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-revel"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top Pathogenic Variants — Hotspots</div>
+          <span class="chip chip-orange">15,750 pathogenic</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Gene</th><th>HGVS.p</th><th>CADD</th><th>REVEL</th>
+                <th>gnomAD AF</th><th>Evidence</th><th>Hotspot</th>
+              </tr></thead>
+              <tbody id="pathog-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- XAI -->
+    <div class="panel fade-in" id="panel-xai">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Explainable AI Heatmap</h1>
+          <p>Residue-level attention map showing which amino acids drove the pathogenicity call</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select class="select-filter" id="xai-variant-select" onchange="updateHeatmap()">
+            <option value="">Select variant…</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="randomizeHeatmap()">Randomize</button>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Residue Attention Heatmap</div>
+            <div style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--ink-3)">
+              <div style="width:10px;height:10px;background:#FFF0F0;border-radius:2px;border:1px solid #E0E0E0"></div> Low
+              <div style="width:10px;height:10px;background:#FF4444;border-radius:2px;margin-left:4px"></div> High
+            </div>
+          </div>
+          <div class="heatmap-grid" id="heatmap-grid"></div>
+          <div style="padding:12px 16px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line)">
+            Hover over cells to see residue details. Red = high AI attention (likely causative).
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header"><div class="card-title">Top Contributing Residues</div></div>
+            <div class="card-body" id="xai-top-residues">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">XAI Confidence Breakdown</div></div>
+            <div class="card-body">
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-xai"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORT -->
+    <div class="panel fade-in" id="panel-report">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Precision Medicine Report</h1>
+          <p>Automated clinical-grade summary for the selected variant</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="navigate('variants')">Change Variant</button>
+          <button class="btn btn-primary btn-sm" onclick="printReport()">⬇ Download PDF</button>
+        </div>
+      </div>
+
+      <div class="report-preview" id="report-content">
+        <div class="report-header">
+          <div>
+            <div class="report-title">Genomic Variant Analysis Report</div>
+            <div style="font-size:13px;color:var(--ink-3);margin-top:4px">GenoStruct Interpreter — Precision Oncology Platform</div>
+          </div>
+          <div class="report-meta">
+            <div>Report ID: <strong id="rpt-id">GSR-000001</strong></div>
+            <div>Date: <strong id="rpt-date"></strong></div>
+            <div>AI Confidence: <strong id="rpt-conf" style="color:var(--accent-2)">87%</strong></div>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <div class="report-section-title">Variant Identification</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="detail-row"><span class="detail-label">Gene</span><span class="detail-val" id="rpt-gene">TP53</span></div>
+            <div class="detail-row"><span class="detail-label">Chromosome</span><span class="detail-val" id="rpt-chr">17p13.1</span></div>
+            <div class="detail-row"><span class="detail-label">HGVS.c</span><span class="detail-val" id="rpt-hgvs-c">c.742C>T</span></div>
+            <div class="detail-row"><span class="detail-label">HGVS.p</span><span class="detail-val" id="rpt-hgvs-p">p.Arg248Trp</span></div>
+            <div class="detail-row"><span class="detail-label">Variant Type</span><span class="detail-val" id="rpt-vtype">SNV · Missense</span></div>
+            <div class="detail-row"><span class="detail-label">Zygosity</span><span class="detail-val" id="rpt-zyg">Heterozygous</span></div>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <div class="report-section-title">AI Pathogenicity Assessment</div>
+          <div class="report-finding" id="rpt-finding">
+            This variant introduces a Tryptophan at position 248 in place of Arginine, disrupting a critical DNA-contact residue in the p53 DNA-binding domain. The structural deformity prevents proper groove contacts with target DNA, abrogating tumor suppressor function. CADD score: 34.2 (highly deleterious). REVEL: 0.938.
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <span style="font-size:13px;font-weight:600">Classification:</span>
+            <span class="path-badge pb-pathog" id="rpt-classification">Pathogenic</span>
+            <span class="chip chip-orange" id="rpt-evidence">Evidence: Level 1A</span>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <div class="report-section-title">Structural Impact</div>
+          <div class="detail-row"><span class="detail-label">Protein Domain</span><span class="detail-val" id="rpt-domain">DNA-binding domain</span></div>
+          <div class="detail-row"><span class="detail-label">Structural Effect</span><span class="detail-val" id="rpt-struct">Blocks ATP-binding pocket</span></div>
+          <div class="detail-row"><span class="detail-label">Structural Score</span><span class="detail-val" id="rpt-sstruct">0.87 / 1.0 (severe)</span></div>
+          <div class="detail-row"><span class="detail-label">Functional Impact</span><span class="detail-val" id="rpt-fimpact">Loss of Function</span></div>
+        </div>
+
+        <div class="report-section">
+          <div class="report-section-title">Drug Recommendations</div>
+          <div class="report-drug-rec">
+            <div class="drug-icon">💊</div>
+            <div>
+              <div class="drug-name" id="rpt-drug1">APR-246 (Eprenetapopt)</div>
+              <div class="drug-detail" id="rpt-drug1-detail">Restores wild-type p53 conformation. Approved for MDS. Evidence Level 1B. Consider for solid tumors off-label.</div>
+            </div>
+          </div>
+          <div class="report-drug-rec">
+            <div class="drug-icon">🔬</div>
+            <div>
+              <div class="drug-name" id="rpt-drug2">Pembrolizumab (Keytruda)</div>
+              <div class="drug-detail">Checkpoint inhibitor. Recommended for TP53-mutant NSCLC with PD-L1 ≥ 1%. Evidence Level 1A.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <div class="report-section-title">Population Genetics</div>
+          <div class="detail-row"><span class="detail-label">gnomAD AF</span><span class="detail-val" id="rpt-gnomad">0.000012 (ultra-rare)</span></div>
+          <div class="detail-row"><span class="detail-label">ClinVar ID</span><span class="detail-val" id="rpt-clinvar">VCV000012375</span></div>
+          <div class="detail-row"><span class="detail-label">COSMIC ID</span><span class="detail-val" id="rpt-cosmic">COSM99784</span></div>
+          <div class="detail-row"><span class="detail-label">Inheritance</span><span class="detail-val" id="rpt-inherit">Somatic</span></div>
+        </div>
+
+        <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-3);line-height:1.6">
+          ⚠️ This report is generated by an AI-assisted decision support tool. All findings must be reviewed and validated by a board-certified clinical geneticist or oncologist before clinical application. This report does not constitute a final medical diagnosis.
+        </div>
+      </div>
+    </div>
+
+    <!-- LITERATURE -->
+    <div class="panel fade-in" id="panel-literature">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Scientific Justification Feed</h1>
+          <p>Curated literature, clinical evidence, and drug reimbursement data for the selected variant</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input class="search-input" style="width:240px" placeholder="Search literature…" oninput="filterLit(this.value)" id="lit-search"/>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchLitTab('all', this)">All</button>
+            <button class="tab-btn" onclick="switchLitTab('clinical', this)">Clinical</button>
+            <button class="tab-btn" onclick="switchLitTab('drug', this)">Drug</button>
+            <button class="tab-btn" onclick="switchLitTab('structure', this)">Structure</button>
+          </div>
+          <div id="lit-list"><!-- Populated by JS --></div>
+        </div>
+
+        <div class="card" style="height: fit-content; position: sticky; top: 24px;">
+          <div class="card-header"><div class="card-title">Digital Medical Representative</div></div>
+          <div class="card-body">
+            <div style="font-size:13px;line-height:1.7;color:var(--ink-2)" id="dmr-panel">
+              <div style="font-weight:600;margin-bottom:8px;color:var(--accent)">Clinical Intelligence Summary</div>
+              <p>Select a variant to generate a personalized evidence summary bridging lab findings to available therapies.</p>
+              <div style="margin-top:16px;padding:12px;background:var(--accent-pale);border-radius:8px;">
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">Reimbursement Status</div>
+                <div id="dmr-reimburse">Loading variant data…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPARE -->
+    <div class="panel fade-in" id="panel-compare">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Comparative Variant Analysis</h1>
+          <p>Side-by-side comparison of mutant vs wild-type protein structures</p>
+        </div>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="compare-card">
+          <div class="compare-card-header wild">🧬 Wild-Type Reference</div>
+          <canvas class="compare-mini-canvas" id="compare-canvas-wt"></canvas>
+          <div class="compare-stats" id="wt-stats">
+            <div class="compare-stat-row"><span>Structure Stability</span><span style="color:var(--benign);font-weight:600">High (0.92)</span></div>
+            <div class="compare-stat-row"><span>Drug Binding</span><span style="color:var(--benign);font-weight:600">Normal</span></div>
+            <div class="compare-stat-row"><span>DNA Contact</span><span style="color:var(--benign);font-weight:600">Intact</span></div>
+            <div class="compare-stat-row"><span>Thermal Stability</span><span>Tm = 47°C</span></div>
+            <div class="compare-stat-row"><span>RMSF (Å)</span><span>1.2</span></div>
+          </div>
+        </div>
+
+        <div class="comparison-vs">vs</div>
+
+        <div class="compare-card">
+          <div class="compare-card-header mut">⚠ Mutant Variant</div>
+          <canvas class="compare-mini-canvas" id="compare-canvas-mut"></canvas>
+          <div class="compare-stats" id="mut-stats">
+            <div class="compare-stat-row"><span>Structure Stability</span><span style="color:var(--lpathog);font-weight:600" id="cmp-stability">Low (0.13)</span></div>
+            <div class="compare-stat-row"><span>Drug Binding</span><span style="color:var(--lpathog);font-weight:600" id="cmp-drug">Severely Impaired</span></div>
+            <div class="compare-stat-row"><span>DNA Contact</span><span style="color:var(--lpathog);font-weight:600" id="cmp-dna">Lost</span></div>
+            <div class="compare-stat-row"><span>Thermal Stability</span><span id="cmp-thermal">Tm = 39°C (−8°C)</span></div>
+            <div class="compare-stat-row"><span>RMSF (Å)</span><span id="cmp-rmsf">4.7 (+3.5)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <div class="card-header"><div class="card-title">Structural Difference Analysis</div></div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-compare"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast area -->
+<div class="toast-area" id="toast-area"></div>
+<div class="heatmap-tooltip" id="heatmap-tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+//  GenoStruct Interpreter — Main Application Script
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Embedded sample data (first 100 representative variants) ──────────────────
+const SAMPLE_DATA = generateSampleData();
+
+function generateSampleData() {
+  const genes = ["TP53","BRCA1","BRCA2","EGFR","KRAS","PIK3CA","APC","PTEN","RB1","VHL",
+    "MLH1","MSH2","MSH6","CDH1","ATM","CHEK2","PALB2","BRAF","ALK","MET",
+    "RET","IDH1","IDH2","JAK2","FLT3","NPM1","DNMT3A","TET2","ASXL1","EZH2",
+    "NOTCH1","FBXW7","PTPN11","NRAS","HRAS","CEBPA","RUNX1","KMT2A","ARID1A","SMARCA4"];
+
+  const pathos = ["Benign","Likely Benign","Variant of Uncertain Significance","Likely Pathogenic","Pathogenic"];
+  const pWeights = [0.28, 0.22, 0.20, 0.14, 0.16];
+  const vtypes = ["SNV","InDel","Frameshift","Nonsense","Missense","CNV","Splice","Silent"];
+  const vtWeights = [0.40, 0.20, 0.10, 0.05, 0.10, 0.05, 0.05, 0.05];
+  const cancers = ["Lung Adenocarcinoma","Colorectal Cancer","Breast Cancer","Glioblastoma",
+    "Pancreatic Ductal Adenocarcinoma","Ovarian Cancer","Prostate Cancer","Melanoma",
+    "Acute Myeloid Leukemia","Non-Hodgkin Lymphoma","Hepatocellular Carcinoma","Gastric Cancer"];
+  const domains = ["DNA-binding domain","Kinase domain","SH2 domain","BRCT domain","RING finger domain",
+    "WD40 repeat","Ankyrin repeat","Leucine zipper","Zinc finger domain","RAS-binding domain"];
+  const structEffects = ["Disrupts alpha-helix formation","Blocks ATP-binding pocket","Prevents dimerization",
+    "Alters substrate recognition loop","Loss of hydrophobic core packing","No significant structural change",
+    "Conservative substitution","Steric clash with co-factor","Impairs nuclear localization"];
+  const drugs = ["Olaparib","Pembrolizumab","Erlotinib","Osimertinib","Vemurafenib",
+    "Sotorasib","Ruxolitinib","Ivosidenib","Midostaurin","Larotrectinib",
+    "Trastuzumab","Bevacizumab","Nivolumab","Atezolizumab","Alpelisib"];
+  const evidLevels = ["Level 1A","Level 1B","Level 2A","Level 2B","Level 3","Level 4"];
+  const aa3 = ["Ala","Arg","Asn","Asp","Cys","Gln","Glu","Gly","His","Ile",
+                "Leu","Lys","Met","Phe","Pro","Ser","Thr","Trp","Tyr","Val"];
+
+  function wRand(arr, w) {
+    const r = Math.random(), cum = w.reduce((a,v,i) => { a.push((a[i-1]||0)+v); return a; }, []);
+    return arr[cum.findIndex(c => r <= c)] || arr[arr.length-1];
+  }
+  function rInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
+  function rFloat(a,b,d=3) { return parseFloat((Math.random()*(b-a)+a).toFixed(d)); }
+  function rAA() { return aa3[rInt(0,aa3.length-1)]; }
+
+  const rows = [];
+  const rng = mulberry32(42);
+  function mulberry32(seed) {
+    return function() {
+      seed|=0; seed=seed+0x6D2B79F5|0;
+      let t=Math.imul(seed^seed>>>15,1|seed);
+      t=t+Math.imul(t^t>>>7,61|t)^t;
+      return ((t^t>>>14)>>>0)/4294967296;
+    };
+  }
+  function seededRand(a,b) { return Math.floor(rng()*(b-a+1))+a; }
+  function seededFloat(a,b,d=3) { return parseFloat((rng()*(b-a)+a).toFixed(d)); }
+  function seededPick(arr) { return arr[Math.floor(rng()*arr.length)]; }
+  function seededWeightPick(arr, w) {
+    const r = rng(), cum = w.reduce((a,v,i)=>{ a.push((a[i-1]||0)+v); return a; },[]);
+    return arr[cum.findIndex(c=>r<=c)]||arr[arr.length-1];
+  }
+
+  const pathScoreMap = {
+    "Benign": [0, 0.2], "Likely Benign": [0.15, 0.35],
+    "Variant of Uncertain Significance": [0.4, 0.65],
+    "Likely Pathogenic": [0.6, 0.82], "Pathogenic": [0.78, 1.0]
+  };
+  const caddMap = {
+    "Benign": [1,12], "Likely Benign":[5,18],
+    "Variant of Uncertain Significance":[10,25],
+    "Likely Pathogenic":[20,32], "Pathogenic":[26,40]
+  };
+
+  for (let i = 0; i < 500; i++) {
+    const gene = seededPick(genes);
+    const pathog = seededWeightPick(pathos, pWeights);
+    const vtype = seededWeightPick(vtypes, vtWeights);
+    const aa1 = seededPick(aa3), aa2 = seededPick(aa3.filter(a=>a!==aa1));
+    const pos = seededRand(1, 1500);
+    let hgvsp = `p.${aa1}${pos}${aa2}`;
+    if (vtype === "Nonsense") hgvsp = `p.${aa1}${pos}*`;
+    if (vtype === "Frameshift") hgvsp = `p.${aa1}${pos}fs*${seededRand(1,30)}`;
+    if (vtype === "Silent") hgvsp = `p.${aa1}${pos}=`;
+    const caddRange = caddMap[pathog];
+    const pscoreRange = pathScoreMap[pathog];
+    rows.push({
+      variant_id: `GS${String(i+1).padStart(7,'0')}`,
+      gene, pathogenicity: pathog, variant_type: vtype,
+      hgvs_c: `c.${seededRand(1,10000)}${seededPick(['A','C','G','T'])}>${seededPick(['A','C','G','T'])}`,
+      hgvs_p: hgvsp,
+      pathogenicity_score: seededFloat(...pscoreRange),
+      cadd_phred: seededFloat(...caddRange, 1),
+      revel_score: seededFloat(0.05, 0.98, 4),
+      gnomad_af: seededFloat(0, 0.05, 6),
+      vaf: seededFloat(0.05, 0.95, 3),
+      confidence_score: seededRand(35, 98),
+      structural_score: seededFloat(0.05, 0.95),
+      structural_effect: seededPick(structEffects),
+      protein_domain: seededPick(domains),
+      functional_impact: seededPick(["Loss of Function","Gain of Function","Unknown","No Impact","Dominant Negative"]),
+      cancer_type: seededPick(cancers),
+      recommended_drug: seededPick(drugs),
+      evidence_level: seededPick(evidLevels),
+      chromosome: String(seededRand(1,22)),
+      position: seededRand(1000, 250000000),
+      zygosity: seededPick(["Heterozygous","Homozygous","Hemizygous"]),
+      clinvar_id: `VCV${String(seededRand(100000,999999)).padStart(9,'0')}`,
+      cosmic_id: `COSM${seededRand(10000,9999999)}`,
+      allele_origin: seededPick(["Somatic","Germline","Unknown"]),
+      inheritance_pattern: seededPick(["Somatic","Germline","Autosomal Dominant","de novo"]),
+      hotspot: rng() > 0.8,
+      actionable: pathog.includes("Pathogenic") && rng() > 0.3,
+      tier: seededPick(["Tier I","Tier II","Tier III","Tier IV"]),
+      msi_status: seededPick(["MSI-H","MSI-L","MSS"]),
+      tmb: seededFloat(0.5, 60, 1),
+      read_depth: seededRand(50, 2000),
+      sift_prediction: seededPick(["Deleterious","Tolerated","Tolerated (low confidence)"]),
+      polyphen2_prediction: seededPick(["Probably Damaging","Possibly Damaging","Benign"]),
+      lab_source: seededPick(["MSKCC","Mayo Clinic","Broad Institute","UCSF","Johns Hopkins"]),
+      reported_date: `20${seededRand(10,24)}-${String(seededRand(1,12)).padStart(2,'0')}-${String(seededRand(1,28)).padStart(2,'0')}`,
+      review_status: seededPick(["Reviewed by expert panel","Multiple submitters","Single submitter"]),
+      copy_number: "Normal",
+      drug_class: seededPick(["Targeted Therapy","Immunotherapy","PARP Inhibitor","Chemotherapy"])
+    });
+  }
+  return rows;
+}
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let currentVariant = SAMPLE_DATA.find(v => v.pathogenicity === "Pathogenic") || SAMPLE_DATA[0];
+let currentPage = 0;
+const PAGE_SIZE = 15;
+let filteredData = [...SAMPLE_DATA];
+let sortCol = 'variant_id', sortAsc = true;
+let threeScene = null, threeRenderer = null, threeCamera = null,
+    threeProtein = null, animId = null, autoSpin = false;
+let litFilter = 'all';
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function navigate(panel) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`panel-${panel}`)?.classList.add('active');
+  document.getElementById(`nav-${panel}`)?.classList.add('active');
+
+  if (panel === 'viewer')       initViewer();
+  if (panel === 'compare')      initCompare();
+  if (panel === 'pathogenicity') initPathogPanel();
+  if (panel === 'xai')          initXAI();
+  if (panel === 'literature')   initLiterature();
+  if (panel === 'report')       updateReport();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, icon='✓') {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<span>${icon}</span> ${msg}`;
+  document.getElementById('toast-area').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+// ── Dashboard Charts ───────────────────────────────────────────────────────────
+function initDashboard() {
+  const pathCounts = {
+    "Benign": 27916, "Likely Benign": 22170,
+    "Variant of Uncertain Significance": 20253,
+    "Likely Pathogenic": 13911, "Pathogenic": 15750
+  };
+
+  // Pathogenicity donut
+  new Chart(document.getElementById('chart-pathog'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(pathCounts),
+      datasets: [{ data: Object.values(pathCounts),
+        backgroundColor: ['#2E7D32','#558B2F','#F57C00','#C62828','#B71C1C'],
+        borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { font: {size:11}, padding: 8 }},
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw.toLocaleString()} (${(ctx.raw/100000*100).toFixed(1)}%)` }}}}
+  });
+
+  // Top genes bar
+  const topGenes = [["NF1",1881],["ASXL1",992],["CSF3R",975],["APC",973],["MET",972],
+    ["JAK2",972],["TET2",972],["MPL",971],["ARID1B",970],["CTNNA1",964]];
+  new Chart(document.getElementById('chart-genes'), {
+    type: 'bar',
+    data: {
+      labels: topGenes.map(g=>g[0]),
+      datasets: [{ label: 'Variants', data: topGenes.map(g=>g[1]),
+        backgroundColor: '#3949AB', borderRadius: 4, borderSkipped: false }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false }},
+      scales: { x: { grid: { color: '#F0F0EE' }}, y: { grid: { display: false }}}}
+  });
+
+  // Variant types
+  new Chart(document.getElementById('chart-types'), {
+    type: 'polarArea',
+    data: {
+      labels: ['SNV','InDel','Frameshift','Nonsense','Missense','CNV','Splice','Silent'],
+      datasets: [{ data: [45000,20000,8000,4000,8000,8000,5000,2000],
+        backgroundColor: ['#3949AB88','#29B6F688','#66BB6A88','#FFA72688','#EF535088',
+          '#AB47BC88','#26C6DA88','#D4E15788'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { font:{size:10}, padding:6 }}}}
+  });
+
+  // Recent table
+  const recent = SAMPLE_DATA.filter(v=>v.pathogenicity.includes('Pathogenic')).slice(0,8);
+  const tbody = document.getElementById('recent-tbody');
+  tbody.innerHTML = recent.map(v => `
+    <tr onclick="selectVariant('${v.variant_id}')">
+      <td><span class="gene-tag">${v.gene}</span></td>
+      <td><span class="hgvs-tag">${v.hgvs_p}</span></td>
+      <td>${pathBadge(v.pathogenicity)}</td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:${v.confidence_score}%;background:${v.confidence_score>75?'#3949AB':v.confidence_score>50?'#F57C00':'#B71C1C'}"></div></div>
+          <span class="score-val">${v.confidence_score}%</span>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ── Variant Explorer ───────────────────────────────────────────────────────────
+function initVariants() {
+  // populate gene filter
+  const genes = [...new Set(SAMPLE_DATA.map(v=>v.gene))].sort();
+  const gf = document.getElementById('var-gene-filter');
+  genes.forEach(g => { const o=document.createElement('option'); o.textContent=g; gf.appendChild(o); });
+  renderVariantTable();
+}
+
+function filterVariants() {
+  const q = document.getElementById('var-search').value.toLowerCase();
+  const pf = document.getElementById('var-pathog-filter').value;
+  const tf = document.getElementById('var-type-filter').value;
+  const gf = document.getElementById('var-gene-filter').value;
+  filteredData = SAMPLE_DATA.filter(v =>
+    (!q || v.variant_id.toLowerCase().includes(q) || v.gene.toLowerCase().includes(q) ||
+           v.hgvs_p.toLowerCase().includes(q) || v.cancer_type.toLowerCase().includes(q)) &&
+    (!pf || v.pathogenicity === pf) &&
+    (!tf || v.variant_type === tf) &&
+    (!gf || v.gene === gf)
+  );
+  currentPage = 0;
+  renderVariantTable();
+}
+
+function sortTable(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  filteredData.sort((a,b) => {
+    const av = a[col], bv = b[col];
+    if (typeof av === 'number') return sortAsc ? av-bv : bv-av;
+    return sortAsc ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  });
+  renderVariantTable();
+}
+
+function changePage(dir) {
+  const maxPage = Math.ceil(filteredData.length / PAGE_SIZE) - 1;
+  currentPage = Math.max(0, Math.min(maxPage, currentPage + dir));
+  renderVariantTable();
+}
+
+function renderVariantTable() {
+  const start = currentPage * PAGE_SIZE;
+  const page = filteredData.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('var-tbody');
+  tbody.innerHTML = page.map(v => `
+    <tr onclick="selectVariant('${v.variant_id}')" class="${currentVariant.variant_id===v.variant_id?'selected':''}">
+      <td style="font-family:var(--font-mono);font-size:11px">${v.variant_id}</td>
+      <td><span class="gene-tag">${v.gene}</span></td>
+      <td><span class="hgvs-tag">${v.hgvs_p}</span></td>
+      <td><span class="chip ${vtChip(v.variant_type)}">${v.variant_type}</span></td>
+      <td>${pathBadge(v.pathogenicity)}</td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.min(v.cadd_phred/40*100,100)}%;background:${caddColor(v.cadd_phred)}"></div></div>
+          <span class="score-val">${v.cadd_phred}</span>
+        </div>
+      </td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:${v.confidence_score}%;background:#3949AB"></div></div>
+          <span class="score-val">${v.confidence_score}%</span>
+        </div>
+      </td>
+      <td style="font-size:11px;color:var(--ink-3)">${v.cancer_type}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openVariant('${v.variant_id}')">Analyse</button></td>
+    </tr>`).join('');
+
+  const total = filteredData.length;
+  const pages = Math.ceil(total/PAGE_SIZE);
+  document.getElementById('page-info').textContent = `Page ${currentPage+1} of ${pages} · ${total.toLocaleString()} variants`;
+  document.getElementById('var-count-label').textContent = `Showing ${total.toLocaleString()} variants`;
+  document.getElementById('nav-variant-count').textContent = total.toLocaleString();
+}
+
+function openVariant(id) {
+  selectVariant(id);
+  navigate('viewer');
+  toast(`Opened ${currentVariant.gene} ${currentVariant.hgvs_p} in 3D Viewer`,'🔬');
+}
+
+function selectVariant(id) {
+  const v = SAMPLE_DATA.find(x => x.variant_id === id);
+  if (v) { currentVariant = v; updateViewerInfo(v); updateReport(); }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function pathBadge(p) {
+  const map = {
+    "Benign": "pb-benign", "Likely Benign": "pb-lbenign",
+    "Variant of Uncertain Significance": "pb-vus",
+    "Likely Pathogenic": "pb-lpathog", "Pathogenic": "pb-pathog"
+  };
+  return `<span class="path-badge ${map[p]||'pb-vus'}">${p}</span>`;
+}
+function vtChip(t) {
+  if (t==="Pathogenic"||t==="Nonsense"||t==="Frameshift") return "chip-orange";
+  if (t==="SNV"||t==="Missense") return "chip-blue";
+  return "chip-green";
+}
+function caddColor(c) { return c>30?'#B71C1C':c>20?'#F57C00':c>10?'#558B2F':'#2E7D32'; }
+
+// ── 3D Protein Viewer ──────────────────────────────────────────────────────────
+function initViewer() {
+  const canvas = document.getElementById('protein-canvas');
+  const wrap   = document.getElementById('protein-canvas-wrap');
+  if (!canvas || !wrap) return;
+
+  if (threeRenderer) {
+    threeRenderer.setSize(wrap.clientWidth, wrap.clientHeight);
+    updateViewerInfo(currentVariant);
+    return;
+  }
+
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  threeScene    = new THREE.Scene();
+  threeCamera   = new THREE.PerspectiveCamera(60, W/H, 0.1, 1000);
+  threeCamera.position.z = 18;
+  threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  threeRenderer.setSize(W, H);
+  threeRenderer.setPixelRatio(window.devicePixelRatio);
+  threeRenderer.setClearColor(0x0A0A1A, 1);
+
+  // Lighting
+  const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
+  threeScene.add(ambLight);
+  const dirLight = new THREE.DirectionalLight(0x4488FF, 1.2);
+  dirLight.position.set(5, 10, 5);
+  threeScene.add(dirLight);
+  const pLight = new THREE.PointLight(0xFF4444, 1.5, 30);
+  pLight.position.set(-5, -3, 5);
+  threeScene.add(pLight);
+  const rimLight = new THREE.DirectionalLight(0xFFAA44, 0.6);
+  rimLight.position.set(-8, 0, -5);
+  threeScene.add(rimLight);
+
+  buildProtein();
+  addStarfield();
+  setupMouseControl(canvas, wrap);
+  startRender();
+  updateViewerInfo(currentVariant);
+
+  // Populate gene select
+  const sel = document.getElementById('viewer-gene-select');
+  if (sel.options.length <= 1) {
+    [...new Set(SAMPLE_DATA.map(v=>v.gene))].sort().forEach(g => {
+      const o = document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o);
+    });
+  }
+}
+
+function buildProtein() {
+  if (threeProtein) { threeScene.remove(threeProtein); threeProtein.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();}); }
+  threeProtein = new THREE.Group();
+
+  const v = currentVariant;
+  const isPathog = v.pathogenicity.includes("Pathogenic");
+  const structScore = v.structural_score || 0.5;
+
+  // Generate chain backbone as curved tube
+  const points = [];
+  const N = 120;
+  for (let i = 0; i < N; i++) {
+    const t = i / N;
+    const wave = isPathog ? Math.sin(i * 0.3 + structScore * 2) * (1 + structScore * 0.5) : Math.sin(i * 0.25) * 0.5;
+    points.push(new THREE.Vector3(
+      Math.cos(t * Math.PI * 3) * (4 + wave * 0.5),
+      (t - 0.5) * 14 + wave,
+      Math.sin(t * Math.PI * 3) * (4 + wave * 0.5) * 0.8
+    ));
+  }
+
+  const curve = new THREE.CatmullRomCurve3(points);
+  const tubeGeo = new THREE.TubeGeometry(curve, 80, 0.18, 8, false);
+  const tubeMat = new THREE.MeshPhongMaterial({
+    color: isPathog ? 0xFF4444 : 0x4488FF,
+    emissive: isPathog ? 0x220000 : 0x001133,
+    shininess: 80, transparent: true, opacity: 0.9
+  });
+  threeProtein.add(new THREE.Mesh(tubeGeo, tubeMat));
+
+  // Alpha helices (cylindrical segments)
+  const helixColor = 0x4488FF;
+  for (let h = 0; h < 5; h++) {
+    const tStart = 0.1 + h * 0.16;
+    const helixPoints = [];
+    for (let i = 0; i < 20; i++) {
+      const t = tStart + i/20 * 0.12;
+      helixPoints.push(curve.getPoint(t));
+    }
+    if (helixPoints.length < 2) continue;
+    const hCurve = new THREE.CatmullRomCurve3(helixPoints);
+    const hGeo = new THREE.TubeGeometry(hCurve, 12, 0.38, 8, false);
+    const hMat = new THREE.MeshPhongMaterial({
+      color: helixColor, emissive: 0x001155, shininess: 100,
+      transparent: true, opacity: 0.85
+    });
+    threeProtein.add(new THREE.Mesh(hGeo, hMat));
+  }
+
+  // Beta sheets (flat ribbons)
+  for (let b = 0; b < 4; b++) {
+    const tStart = 0.05 + b * 0.22;
+    const p1 = curve.getPoint(tStart);
+    const p2 = curve.getPoint(tStart + 0.08);
+    const dir = p2.clone().sub(p1).normalize();
+    const up  = new THREE.Vector3(0,1,0);
+    const side = dir.clone().cross(up).normalize();
+    const geo = new THREE.BoxGeometry(
+      p1.distanceTo(p2)*1.5, 0.08, 0.9
+    );
+    const mat = new THREE.MeshPhongMaterial({ color: 0x44CC88, shininess: 60 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(p1.clone().add(p2).multiplyScalar(0.5));
+    mesh.lookAt(p2);
+    threeProtein.add(mesh);
+  }
+
+  // Mutation site sphere (glowing red)
+  const mutPt = curve.getPoint(0.45 + Math.random() * 0.1);
+  const mutGeo = new THREE.SphereGeometry(0.6, 24, 24);
+  const mutMat = new THREE.MeshPhongMaterial({
+    color: 0xFF2222, emissive: 0xAA0000, shininess: 120,
+    transparent: true, opacity: isPathog ? 0.95 : 0.5
+  });
+  threeProtein.add(new THREE.Mesh(mutGeo, mutMat));
+  (new THREE.Mesh(mutGeo, mutMat)).position.copy(mutPt);
+  const mutSphere = new THREE.Mesh(mutGeo, mutMat);
+  mutSphere.position.copy(mutPt);
+  threeProtein.add(mutSphere);
+
+  // Drug binding pocket (magenta ring)
+  const pocketPt = curve.getPoint(0.35);
+  const ringGeo = new THREE.TorusGeometry(1.2, 0.12, 12, 40);
+  const ringMat = new THREE.MeshPhongMaterial({
+    color: 0xFF00FF, emissive: 0x550055,
+    transparent: true, opacity: 0.7
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.copy(pocketPt);
+  ring.rotation.x = Math.PI / 3;
+  threeProtein.add(ring);
+
+  // Side chain blobs along backbone
+  for (let i = 0; i < 40; i++) {
+    const t = i / 40 + 0.01;
+    const pt = curve.getPoint(t);
+    const sc_geo = new THREE.SphereGeometry(0.12 + Math.random()*0.08, 6, 6);
+    const hue = isPathog && i > 15 && i < 25 ? 0xFF3333 : 0x6699FF;
+    const sc_mat = new THREE.MeshPhongMaterial({ color: hue, emissive: 0x000011 });
+    const sc = new THREE.Mesh(sc_geo, sc_mat);
+    const off = new THREE.Vector3(
+      (Math.random()-0.5)*2, (Math.random()-0.5)*2, (Math.random()-0.5)*2
+    );
+    sc.position.copy(pt).add(off.multiplyScalar(0.6));
+    threeProtein.add(sc);
+  }
+
+  threeScene.add(threeProtein);
+}
+
+function addStarfield() {
+  const geo = new THREE.BufferGeometry();
+  const pts = [];
+  for (let i = 0; i < 400; i++) {
+    pts.push((Math.random()-0.5)*80, (Math.random()-0.5)*80, (Math.random()-0.5)*80);
+  }
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const mat = new THREE.PointsMaterial({ color: 0x334466, size: 0.1 });
+  threeScene.add(new THREE.Points(geo, mat));
+}
+
+let isDragging = false, lastMX = 0, lastMY = 0;
+function setupMouseControl(canvas, wrap) {
+  canvas.addEventListener('mousedown', e => { isDragging = true; lastMX = e.clientX; lastMY = e.clientY; });
+  window.addEventListener('mouseup', () => isDragging = false);
+  window.addEventListener('mousemove', e => {
+    if (!isDragging || !threeProtein) return;
+    threeProtein.rotation.y += (e.clientX - lastMX) * 0.01;
+    threeProtein.rotation.x += (e.clientY - lastMY) * 0.008;
+    lastMX = e.clientX; lastMY = e.clientY;
+  });
+  canvas.addEventListener('wheel', e => {
+    threeCamera.position.z = Math.max(5, Math.min(40, threeCamera.position.z + e.deltaY * 0.03));
+  });
+  canvas.addEventListener('touchstart', e => { lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY; });
+  canvas.addEventListener('touchmove', e => {
+    if (!threeProtein) return;
+    threeProtein.rotation.y += (e.touches[0].clientX - lastMX) * 0.01;
+    threeProtein.rotation.x += (e.touches[0].clientY - lastMY) * 0.008;
+    lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+  });
+}
+
+function startRender() {
+  function loop() {
+    animId = requestAnimationFrame(loop);
+    if (threeProtein && autoSpin) threeProtein.rotation.y += 0.003;
+    // Pulse mutation site
+    if (threeProtein) {
+      const t = Date.now() * 0.001;
+      threeProtein.children.forEach((c, i) => {
+        if (c.material && c.material.color && c.material.color.r > 0.9 && c.geometry?.type === 'SphereGeometry') {
+          c.material.emissiveIntensity = 0.5 + 0.5 * Math.sin(t * 3);
+        }
+      });
+    }
+    threeRenderer.render(threeScene, threeCamera);
+  }
+  loop();
+}
+
+function resetCamera() { if(threeCamera) { threeCamera.position.set(0,0,18); } if(threeProtein) { threeProtein.rotation.set(0,0,0); } }
+function zoomViewer(f) { if(threeCamera) threeCamera.position.z = Math.max(5, Math.min(40, threeCamera.position.z * f)); }
+function toggleWireframe() {
+  if (!threeProtein) return;
+  threeProtein.traverse(o => { if(o.material) o.material.wireframe = !o.material.wireframe; });
+}
+function toggleSpin() {
+  autoSpin = !autoSpin;
+  document.getElementById('spin-btn').style.background = autoSpin ? 'rgba(57,73,171,0.4)' : 'rgba(255,255,255,0.1)';
+}
+function updateViewerVariant() {
+  const gene = document.getElementById('viewer-gene-select').value;
+  if (!gene) return;
+  const v = SAMPLE_DATA.filter(x=>x.gene===gene && x.pathogenicity.includes("Pathogenic"))[0]
+         || SAMPLE_DATA.find(x=>x.gene===gene);
+  if (v) { currentVariant = v; buildProtein(); updateViewerInfo(v); }
+}
+function updateViewerInfo(v) {
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  set('viewer-gene-name',    `${v.gene} · ${v.hgvs_p}`);
+  set('viewer-domain',       v.protein_domain);
+  set('viewer-struct-eff',   v.structural_effect);
+  set('viewer-struct-score', v.structural_score?.toFixed(2)||'0.50');
+  set('viewer-cadd',         v.cadd_phred?.toFixed(1)||'—');
+  set('vs-protein',          `${v.gene} (UniProt)`);
+  set('vs-residue',          v.hgvs_p);
+  set('vs-domain',           v.protein_domain);
+  set('vs-score',            `${v.structural_score?.toFixed(2)} (${v.structural_score>0.7?'High':v.structural_score>0.4?'Moderate':'Low'} impact)`);
+  set('vs-impact',           v.functional_impact);
+  set('viewer-drug',         v.recommended_drug);
+  set('viewer-drug-detail',  `Evidence: ${v.evidence_level}. ${v.drug_class}. Cancer: ${v.cancer_type}`);
+  set('vs-alt-drug',         SAMPLE_DATA.find(x=>x.gene===v.gene&&x.recommended_drug!==v.recommended_drug)?.recommended_drug||'Pembrolizumab');
+  set('vs-affinity',         `−${(6+v.structural_score*5).toFixed(1)} kcal/mol`);
+}
+
+// ── Pathogenicity Panel ────────────────────────────────────────────────────────
+function initPathogPanel() {
+  // CADD histogram
+  const bins = Array(10).fill(0);
+  SAMPLE_DATA.forEach(v => { const b = Math.min(9, Math.floor(v.cadd_phred/4)); bins[b]++; });
+  new Chart(document.getElementById('chart-cadd'), {
+    type: 'bar',
+    data: {
+      labels: ['0-4','4-8','8-12','12-16','16-20','20-24','24-28','28-32','32-36','36+'],
+      datasets: [{ label: 'Variants', data: bins,
+        backgroundColor: bins.map((_,i)=>`hsl(${220-i*22},70%,50%)`), borderRadius: 3, borderSkipped: false }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}}, y:{grid:{color:'#F0F0EE'}}}}
+  });
+
+  // REVEL grouped bar
+  const groups = ["Benign","Likely Benign","VUS","Likely Pathogenic","Pathogenic"];
+  const rData = [0.12, 0.24, 0.48, 0.68, 0.89];
+  new Chart(document.getElementById('chart-revel'), {
+    type: 'bar',
+    data: {
+      labels: groups,
+      datasets: [{ label: 'Avg REVEL', data: rData,
+        backgroundColor: ['#2E7D32','#558B2F','#F57C00','#C62828','#B71C1C'],
+        borderRadius: 4, borderSkipped: false }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}}, y:{min:0,max:1,grid:{color:'#F0F0EE'}}}}
+  });
+
+  // Top pathogenic table
+  const topP = SAMPLE_DATA.filter(v=>v.pathogenicity==="Pathogenic")
+    .sort((a,b)=>b.cadd_phred-a.cadd_phred).slice(0,10);
+  document.getElementById('pathog-tbody').innerHTML = topP.map(v=>`
+    <tr onclick="selectVariant('${v.variant_id}')">
+      <td><span class="gene-tag">${v.gene}</span></td>
+      <td><span class="hgvs-tag">${v.hgvs_p}</span></td>
+      <td><span style="color:${caddColor(v.cadd_phred)};font-weight:600">${v.cadd_phred}</span></td>
+      <td>${v.revel_score.toFixed(4)}</td>
+      <td style="font-family:var(--font-mono);font-size:11px">${v.gnomad_af.toFixed(6)}</td>
+      <td><span class="chip chip-${v.evidence_level.includes('1')?'blue':'orange'}">${v.evidence_level}</span></td>
+      <td>${v.hotspot?'<span style="color:#C62828;font-weight:700">🔥 Yes</span>':'—'}</td>
+    </tr>`).join('');
+}
+
+// ── XAI Heatmap ───────────────────────────────────────────────────────────────
+let heatmapData = [];
+function initXAI() {
+  // Populate select
+  const sel = document.getElementById('xai-variant-select');
+  if (sel.options.length <= 1) {
+    SAMPLE_DATA.slice(0,50).forEach(v => {
+      const o=document.createElement('option');
+      o.value=v.variant_id; o.textContent=`${v.gene} ${v.hgvs_p}`;
+      sel.appendChild(o);
+    });
+  }
+  updateHeatmap();
+}
+function updateHeatmap() { renderHeatmap(currentVariant); }
+function randomizeHeatmap() {
+  const randV = SAMPLE_DATA[Math.floor(Math.random()*SAMPLE_DATA.length)];
+  currentVariant = randV;
+  renderHeatmap(randV);
+}
+function renderHeatmap(v) {
+  const grid = document.getElementById('heatmap-grid');
+  const tooltip = document.getElementById('heatmap-tooltip');
+  const N = 200; // residues to show
+  const isPathog = v.pathogenicity.includes("Pathogenic");
+  const mutCenter = Math.floor(N * 0.4 + Math.random()*20);
+
+  const aa3 = ["Ala","Arg","Asn","Asp","Cys","Gln","Glu","Gly","His","Ile",
+               "Leu","Lys","Met","Phe","Pro","Ser","Thr","Trp","Tyr","Val"];
+
+  heatmapData = Array.from({length: N}, (_,i) => {
+    const dist = Math.abs(i - mutCenter);
+    let score = isPathog
+      ? Math.max(0, 1 - dist/25 + (Math.random()-0.5)*0.3)
+      : Math.random() * 0.3;
+    score = Math.max(0, Math.min(1, score));
+    return { residue: aa3[i % aa3.length], pos: i+1, score };
+  });
+
+  grid.innerHTML = heatmapData.map((d, i) => {
+    const r = Math.round(255 * d.score);
+    const g = Math.round(64 * (1 - d.score));
+    const b = Math.round(64 * (1 - d.score));
+    const bg = `rgb(${255-r+80},${g+40},${g+40})`;
+    return `<div class="heatmap-cell" style="background:${bg};opacity:${0.3+d.score*0.7}"
+      onmouseenter="showHeatTooltip(event,${i})" onmouseleave="hideHeatTooltip()"></div>`;
+  }).join('');
+
+  // Top residues
+  const top5 = [...heatmapData].sort((a,b)=>b.score-a.score).slice(0,5);
+  document.getElementById('xai-top-residues').innerHTML = top5.map((d,i)=>`
+    <div class="detail-row">
+      <span class="detail-label">${d.residue}${d.pos}</span>
+      <div class="score-bar-wrap" style="flex:1;margin-left:12px">
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${d.score*100}%;background:${d.score>0.7?'#B71C1C':d.score>0.4?'#F57C00':'#558B2F'}"></div></div>
+        <span class="score-val">${(d.score*100).toFixed(0)}%</span>
+      </div>
+    </div>`).join('');
+
+  // XAI breakdown chart
+  const ctx = document.getElementById('chart-xai');
+  if (ctx._chartInst) ctx._chartInst.destroy();
+  ctx._chartInst = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Sequence\nConservation','Structural\nImpact','Population\nFrequency','Functional\nAssay','Literature\nEvidence'],
+      datasets: [{
+        label: v.gene,
+        data: [
+          v.cadd_phred/40*100,
+          v.structural_score*100,
+          (1-Math.min(v.gnomad_af,0.05)/0.05)*100,
+          v.confidence_score,
+          v.evidence_level.includes('1')?90:v.evidence_level.includes('2')?65:40
+        ],
+        backgroundColor: 'rgba(57,73,171,0.15)',
+        borderColor: '#3949AB', pointBackgroundColor: '#3949AB'
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      scales:{ r:{ min:0, max:100, ticks:{display:false}, grid:{color:'#E8E8E3'},
+        pointLabels:{font:{size:10}} }},
+      plugins:{legend:{display:false}}}
+  });
+}
+function showHeatTooltip(e, idx) {
+  const d = heatmapData[idx];
+  if (!d) return;
+  const t = document.getElementById('heatmap-tooltip');
+  t.textContent = `${d.residue}${d.pos} — Attention: ${(d.score*100).toFixed(1)}%`;
+  t.style.left = (e.clientX+12)+'px';
+  t.style.top  = (e.clientY-20)+'px';
+  t.style.opacity = 1;
+}
+function hideHeatTooltip() { document.getElementById('heatmap-tooltip').style.opacity = 0; }
+
+// ── Literature Feed ────────────────────────────────────────────────────────────
+const LIT_DB = [
+  { type:'clinical', title:'TP53 R248W mutation drives aggressive tumor phenotype in colorectal cancer', journal:'Nat Cancer', year:2023, authors:'Chen et al.', abstract:'Comprehensive analysis of TP53 hotspot mutations reveals distinct structural consequences and clinical outcomes.' },
+  { type:'drug', title:'APR-246 restores wild-type p53 conformation in cancer cells carrying R248W mutation', journal:'Cancer Cell', year:2022, authors:'Liu et al.', abstract:'Phase II trial results demonstrating clinical benefit of eprenetapopt in TP53-mutant AML.' },
+  { type:'structure', title:'Crystal structure of p53 R248W reveals disrupted DNA-contact mechanism', journal:'Nature', year:2021, authors:'Wang et al.', abstract:'High-resolution structural data showing the molecular basis of R248W pathogenicity.' },
+  { type:'review', title:'Precision oncology for TP53-mutant cancers: current landscape', journal:'JCO', year:2024, authors:'Zhang et al.', abstract:'Comprehensive review of therapeutic strategies for the most common tumor suppressor mutation.' },
+  { type:'clinical', title:'BRCA1/2 mutations predict PARP inhibitor response in ovarian cancer', journal:'NEJM', year:2023, authors:'Mirza et al.', abstract:'Landmark study establishing PARP inhibitor efficacy in germline BRCA-mutant patients.' },
+  { type:'drug', title:'Olaparib maintenance monotherapy in germline BRCA-mutant ovarian cancer', journal:'Lancet Oncol', year:2022, authors:'Pujade-Lauraine et al.', abstract:'Phase III SOLO1 trial long-term follow-up confirms sustained benefit.' },
+  { type:'structure', title:'AlphaFold2 predictions of pathogenic missense variant structural consequences', journal:'Science', year:2023, authors:'Jumper et al.', abstract:'Systematic evaluation of structure prediction accuracy for disease-associated variants.' },
+  { type:'drug', title:'Osimertinib in EGFR-mutant non-small cell lung cancer: FLAURA trial', journal:'NEJM', year:2021, authors:'Ramalingam et al.', abstract:'First-line osimertinib improves PFS vs first-generation EGFR inhibitors.' },
+  { type:'clinical', title:'Genomic determinants of response to immunotherapy in solid tumors', journal:'Cell', year:2024, authors:'Havel et al.', abstract:'Multi-omic profiling reveals TMB, MSI, and specific mutation signatures as biomarkers.' },
+  { type:'review', title:'KRAS G12C inhibition: from bench to clinic', journal:'Nat Rev Cancer', year:2023, authors:'Fell et al.', abstract:'Comprehensive review of AMG-510 and MRTX849 development for KRAS-mutant cancers.' },
+];
+
+function initLiterature() {
+  renderLitList();
+  updateDMR();
+}
+function switchLitTab(type, btn) {
+  litFilter = type;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLitList();
+}
+function filterLit(q) { renderLitList(q); }
+function renderLitList(q='') {
+  const search = (document.getElementById('lit-search')?.value || q).toLowerCase();
+  const filtered = LIT_DB.filter(l =>
+    (litFilter==='all' || l.type===litFilter) &&
+    (!search || l.title.toLowerCase().includes(search) || l.abstract.toLowerCase().includes(search))
+  );
+  document.getElementById('lit-list').innerHTML = filtered.map(l => `
+    <div class="lit-item">
+      <div class="lit-item-top">
+        <span class="lit-tag lt-${l.type}">${l.type}</span>
+        <span style="font-size:11px;color:var(--ink-3)">${l.journal} · ${l.year}</span>
+      </div>
+      <div class="lit-title">${l.title}</div>
+      <div class="lit-meta">${l.authors}</div>
+      <div class="lit-abstract">${l.abstract}</div>
+    </div>`).join('') || `<div class="empty-state"><div class="empty-state-icon">📚</div><h3>No results</h3><p>Try adjusting your search</p></div>`;
+}
+function updateDMR() {
+  const v = currentVariant;
+  const reimburse = document.getElementById('dmr-reimburse');
+  if (reimburse) reimburse.innerHTML = `
+    <div style="margin-bottom:6px;font-size:12px"><strong>${v.recommended_drug}</strong> — ${v.drug_class}</div>
+    <div style="font-size:11px;color:var(--ink-3)">Evidence Level: ${v.evidence_level}</div>
+    <div style="font-size:11px;color:var(--ink-3)">Indication: ${v.cancer_type}</div>
+    <div style="font-size:11px;margin-top:6px;color:${v.evidence_level.includes('1')?'#2E7D32':'#F57C00'}">
+      ${v.evidence_level.includes('1')?'✓ Covered by most insurers (FDA-approved indication)':'⚠ May require prior authorization'}
+    </div>`;
+}
+
+// ── Report ────────────────────────────────────────────────────────────────────
+function updateReport() {
+  const v = currentVariant;
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  set('rpt-id',           v.variant_id.replace('GS','GSR-'));
+  set('rpt-date',         new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}));
+  set('rpt-conf',         v.confidence_score+'%');
+  set('rpt-gene',         v.gene);
+  set('rpt-chr',          `Chr${v.chromosome}:${v.position?.toLocaleString()}`);
+  set('rpt-hgvs-c',       v.hgvs_c);
+  set('rpt-hgvs-p',       v.hgvs_p);
+  set('rpt-vtype',        `${v.variant_type} · ${v.allele_origin}`);
+  set('rpt-zyg',          v.zygosity);
+  set('rpt-domain',       v.protein_domain);
+  set('rpt-struct',       v.structural_effect);
+  set('rpt-sstruct',      `${v.structural_score?.toFixed(2)} / 1.0 (${v.structural_score>0.7?'severe':v.structural_score>0.4?'moderate':'mild'})`);
+  set('rpt-fimpact',      v.functional_impact);
+  set('rpt-drug1',        v.recommended_drug);
+  set('rpt-drug1-detail', `${v.drug_class}. Evidence ${v.evidence_level}. Cancer: ${v.cancer_type}.`);
+  set('rpt-gnomad',       `${v.gnomad_af?.toFixed(6)} (${v.gnomad_af<0.001?'ultra-rare':'low frequency'})`);
+  set('rpt-clinvar',      v.clinvar_id);
+  set('rpt-cosmic',       v.cosmic_id||'—');
+  set('rpt-inherit',      v.inheritance_pattern);
+  set('rpt-evidence',     `Evidence: ${v.evidence_level}`);
+
+  const finding = document.getElementById('rpt-finding');
+  if (finding) finding.textContent = `${v.gene} variant ${v.hgvs_p} detected in ${v.protein_domain}. Effect: ${v.structural_effect}. CADD score: ${v.cadd_phred} (${v.cadd_phred>30?'highly deleterious':v.cadd_phred>20?'deleterious':'moderate'}). REVEL: ${v.revel_score?.toFixed(3)}. Functional impact classified as ${v.functional_impact}.`;
+
+  const cls = document.getElementById('rpt-classification');
+  if (cls) { cls.className = 'path-badge '+({'Benign':'pb-benign','Likely Benign':'pb-lbenign','Variant of Uncertain Significance':'pb-vus','Likely Pathogenic':'pb-lpathog','Pathogenic':'pb-pathog'}[v.pathogenicity]||'pb-vus'); cls.textContent = v.pathogenicity; }
+}
+function printReport() { toast('Generating PDF report…','📄'); setTimeout(()=>{ window.print(); },300); }
+
+// ── Compare Viewer ────────────────────────────────────────────────────────────
+function initCompare() {
+  initMiniViewer('compare-canvas-wt', false);
+  initMiniViewer('compare-canvas-mut', true);
+  const v = currentVariant;
+  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+  set('cmp-stability', `Low (${(v.structural_score||0.5).toFixed(2)})`);
+  set('cmp-drug', v.structural_score>0.6?'Severely Impaired':'Moderately Impaired');
+  set('cmp-dna', v.functional_impact.includes('Loss')?'Lost':'Altered');
+  set('cmp-thermal', `Tm = ${Math.round(47-(v.structural_score||0.5)*15)}°C`);
+  set('cmp-rmsf', `${(1.2+(v.structural_score||0.5)*4).toFixed(1)} (+${(v.structural_score*4).toFixed(1)})`);
+
+  // comparison radar
+  const ctx = document.getElementById('chart-compare');
+  if (ctx._chartInst) ctx._chartInst.destroy();
+  ctx._chartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Structure Stability','DNA Binding','Drug Affinity','Thermal Stability','Dimerization'],
+      datasets: [
+        { label: 'Wild-Type', data: [92,88,85,90,87], backgroundColor: 'rgba(46,125,50,0.7)', borderRadius:3 },
+        { label: 'Mutant',    data: [
+          Math.round((1-(v.structural_score||0.5))*100),
+          v.functional_impact.includes('Loss')?12:45,
+          Math.round((1-(v.structural_score||0.5))*70),
+          Math.round(90-(v.structural_score||0.5)*50),
+          Math.round((1-(v.structural_score||0.5))*80)
+        ], backgroundColor: 'rgba(198,40,40,0.7)', borderRadius:3 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+      scales:{y:{min:0,max:100,grid:{color:'#F0F0EE'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}
+  });
+}
+
+function initMiniViewer(canvasId, isMutant) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W = canvas.parentElement?.clientWidth || 300;
+  const H = 200;
+  canvas.width = W; canvas.height = H;
+
+  const scene    = new THREE.Scene();
+  const camera   = new THREE.PerspectiveCamera(60, W/H, 0.1, 100);
+  camera.position.z = 12;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x0A0A1A, 1);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const d = new THREE.DirectionalLight(isMutant?0xFF4444:0x4488FF, 1.5);
+  d.position.set(5, 8, 5); scene.add(d);
+
+  const pts = [];
+  for (let i=0;i<60;i++) {
+    const t=i/60;
+    const wave = isMutant?Math.sin(i*0.4)*1.5:Math.sin(i*0.25)*0.3;
+    pts.push(new THREE.Vector3(Math.cos(t*Math.PI*2.5)*(3+wave*0.3),(t-0.5)*9+wave,Math.sin(t*Math.PI*2.5)*3*0.7));
+  }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const geo   = new THREE.TubeGeometry(curve, 60, 0.2, 8, false);
+  const mat   = new THREE.MeshPhongMaterial({ color: isMutant?0xFF4444:0x44BB88, shininess:80 });
+  const mesh  = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+
+  (function loop() {
+    requestAnimationFrame(loop);
+    mesh.rotation.y += 0.005;
+    renderer.render(scene, camera);
+  })();
+}
+
+// ── Upload Simulation ─────────────────────────────────────────────────────────
+function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  if (e.dataTransfer.files[0]) simulateUpload(e.dataTransfer.files[0]);
+}
+function handleFileSelect(e) { if (e.target.files[0]) simulateUpload(e.target.files[0]); }
+function simulateUpload(file) {
+  const prog = document.getElementById('upload-progress');
+  prog.style.display = 'block';
+  document.getElementById('upload-filename').textContent = file.name;
+  const steps = [
+    [5, 'Validating file format…'],
+    [20,'Parsing header metadata…'],
+    [40,'Running variant normalization…'],
+    [60,'Querying ClinVar database…'],
+    [75,'Running AI pathogenicity model…'],
+    [88,'Generating 3D protein models…'],
+    [96,'Building report…'],
+    [100,'Analysis complete!']
+  ];
+  let i = 0;
+  function step() {
+    if (i >= steps.length) {
+      toast(`${file.name} processed — ${Math.floor(Math.random()*500)+50} variants found`,'🧬');
+      return;
+    }
+    const [pct, msg] = steps[i++];
+    document.getElementById('upload-fill').style.width = pct+'%';
+    document.getElementById('upload-pct').textContent = pct+'%';
+    document.getElementById('upload-status').textContent = msg;
+    setTimeout(step, 400 + Math.random()*400);
+  }
+  step();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initDashboard();
+  initVariants();
+  updateReport();
+  // nav click handlers are inline onclick
+});
+</script>
+</body>
+</html>
