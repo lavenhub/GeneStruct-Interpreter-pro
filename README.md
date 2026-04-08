@@ -4,6 +4,8 @@ A complete, deployable clinical genomics decision-support system with AI-powered
 
 ---
 
+## Deployed LINK : https://genstruct.vercel.app 
+
 ## 🗂 Project Structure
 
 ```
